@@ -21,8 +21,8 @@ This is an authentication system API built using **Node.js**, **Express.js**, an
 
 ## 📦 Installation  
 ```sh
-git clone https://github.com/your-repo/api-key-auth
-cd api-key-auth
+git clone https://github.com/ajaykumarsaini231/Api_key
+cd Api_key
 npm install
 ```
 
