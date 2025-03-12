@@ -1,4 +1,5 @@
 const Joi = require('joi');
+const { post } = require('../routers/authrouter');
 
 exports.signupSchema = Joi.object({
     email: Joi.string()
@@ -65,3 +66,12 @@ exports.acceptforgotCodeSchema = Joi.object({
     
                 
 });
+
+
+
+exports.postValidatort = Joi.object({
+    title:Joi.string().min(6).max(600).required(),
+    description:Joi.string().min(6).required(),
+    userId:Joi.string().required()
+    
+})

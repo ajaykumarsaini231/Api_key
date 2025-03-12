@@ -1,33 +1,40 @@
-const express = require('express')
-const helmet = require("helmet")
-const cors = require("cors")
-const cookieperser =require("cookie-parser")
-const mongoose = require('mongoose')
+const express = require('express');
+const helmet = require("helmet");
+const cors = require("cors");
+const cookieParser = require("cookie-parser");
 require('dotenv').config();
-const app= express()
+const connectDB = require('./connection'); // Import database connection function
 
-const authRouter = require('./routers/authrouter')
+const app = express();
+const authRouter = require('./routers/authrouter');
+const postsRouter = require('./routers/postsrouter');
 
-app.use(cors())
-app.use(cookieperser())
-app.use(express.json())
-app.use(express.urlencoded({extended:true}))
+// Middleware
+app.use(cors());
+app.use(cookieParser());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
+// Connect to Database Before Handling Requests
+app.use(async (req, res, next) => {
+    try {
+        await connectDB(); // Ensure MongoDB connection
+        next();
+    } catch (error) {
+        console.error("Database connection failed", error);
+        return res.status(500).json({ message: "Internal Server Error" });
+    }
+});
 
-mongoose.connect(process.env.MONGO_URI)
-.then(()=>{
-    console.log("mongoose connected")
-})
-.catch((err)=>{
-    console.log(err)
-})
+// Routes
+app.get('/', (req, res) => {
+    res.json({ message: "Hello from the server" });
+});
 
-app.get('/',(req,res)=>{
-    res.json({message:"hello from the server"})
-})
-
-app.use("/api/auth", authRouter)
-
-app.listen(process.env.PORT,()=>{
-    console.log("Listening....")
-})
+app.use("/api/auth", authRouter);
+app.use("/api/posts",postsRouter)
+// Start Server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
