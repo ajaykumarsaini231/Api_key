@@ -27,14 +27,17 @@ npm install
 ```
 
 ## 🚀 Usage  
-1. **Create a `.env` file** and add the following:  
-   ```env
-   HOST=your_mongodb_host
-   USER=your_db_user
-   PASSWORD=your_db_password
-   DATABASE=your_database_name
-   SECRET_KEY=your_jwt_secret
-   ```
+1. ## ⚙️ **Environment Variables (.env file)**  
+Create a `.env` file in the root directory and add the following:  
+
+```env
+PORT=8000
+MONGO_URI=your_mongodb_connection_string
+Secret_Token=your_jwt_secret
+NODE_CODE_SENDING_EMAIL_ADDRESS=your_email@example.com
+NODE_CODE_SENDING_EMAIL_ADDRESS_PASSWORD=your_email_password
+HMAC_VARIFICATION_CODE_SECRET=your_hmac_secret_key
+```
 
 2. **Start the server:**  
    ```sh
@@ -65,4 +68,5 @@ npm install
 
 ## 📜 License  
 This project is **MIT Licensed**.  
+
 
