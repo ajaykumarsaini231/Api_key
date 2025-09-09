@@ -2,7 +2,13 @@ const { required, boolean } = require("joi");
 const mongoose = require("mongoose");
 
 const userSchema = mongoose.Schema(
-  {
+  { 
+    name:{
+         type:String,
+         lowercase: true,
+         trim: true,
+        required: [true, "Name is required"], 
+      },
     email: {
       type: String,
       required: [true, "Email is required"],

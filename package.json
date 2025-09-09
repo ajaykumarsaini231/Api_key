@@ -7,8 +7,8 @@
   "type": "commonjs",
   "main": "index.js",
   "scripts": {
-   "start": "node --env-file=.env index.js",
-   "dev":"node --watch --trace-warnings --env-file=.env index.js"
+    "start": "node --env-file=.env index.js",
+    "dev": "node --watch --trace-warnings --env-file=.env index.js"
   },
   "dependencies": {
     "bcryptjs": "^3.0.2",

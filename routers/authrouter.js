@@ -4,6 +4,7 @@ const { identifier } = require("../middlewares/indentifier")
 const router = express.Router()
 
 router.post("/signup", authcontroller.signup)
+router.post("/verify-otp", authcontroller.verifyOtp)
 router.post("/signin",  authcontroller.signin)
 router.post("/signout",identifier, authcontroller.signout)
 router.patch("/sendVarificationCode", identifier, authcontroller.sendVarificationcode)

@@ -2,11 +2,14 @@ const Joi = require('joi');
 const { post } = require('../routers/authrouter');
 
 exports.signupSchema = Joi.object({
+    name:Joi.string()
+    .required(),
+
     email: Joi.string()
         .min(6)
         .max(60)
         .required()
-        .email({ tlds: { allow: ['com', 'net'] } }),
+        .email({ tlds: { allow: ['com', 'net','in'] } }),
 
     password: Joi.string()
         .required()
@@ -19,7 +22,7 @@ exports.signinSchema = Joi.object({
         .min(6)
         .max(60)
         .required()
-        .email({ tlds: { allow: ['com', 'net'] } }),
+        .email({ tlds: { allow: ['com', 'net','in'] } }),
 
     password: Joi.string()
         .required()

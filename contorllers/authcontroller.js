@@ -11,88 +11,205 @@ const { doHash, dohashValidation, hmacProcess } = require("../utils/hashing");
 const { transport } = require("../middlewares/sendmail");
 
 exports.signup = async (req, res) => {
-  const { email, password } = req.body;
-  try {
-    const { error, value } = signupSchema.validate({ email, password });
+  const { name, email, password } = req.body;
 
+  try {
+    // Validate input
+    const { error } = signupSchema.validate({ name, email, password });
     if (error) {
-      return res
-        .status(401)
-        .json({ success: false, message: error.details[0] });
+      return res.status(400).json({ success: false, message: error.details[0].message });
     }
-    const existinguser = await User.findOne({ email });
-    if (existinguser) {
-      return res
-        .status(401)
-        .json({ success: false, message: "User already exist" });
+
+    // Check if user exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ success: false, message: "User already exists" });
     }
+
+    // Hash password
     const hashedPassword = await doHash(password, 12);
+
+    // Generate OTP
+    const codevalue = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiry = Date.now() + 5 * 60 * 1000; // 5 minutes
+    console.log("OTP:", codevalue);
+
+    // Create new user
     const newUser = new User({
+      name,
       email,
       password: hashedPassword,
+      varified: false,
+      varificationCode: codevalue,
+      varificationCodeValidation: expiry,
     });
+
     const result = await newUser.save();
-    result.password = undefined;
+
+    // Send OTP email
+    await transport.sendMail({
+      from: process.env.NODE_CODE_SENDING_EMAIL_ADDRESS,
+      to: newUser.email,
+      subject: "Verification code",
+      html: `<h1>${codevalue}</h1>`,
+    });
+
+    result.password = undefined; // remove password
+
     res.status(201).json({
       success: true,
-      message: "your account has been created successfully",
-      result,
+      message: "Signup successful. OTP sent to your email.",
+      email: newUser.email,
     });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    res.status(500).json({ success: false, message: "Internal Server Error" });
   }
 };
 
-exports.signin = async (req, res) => {
-  const { email, password } = req.body;
+
+
+exports.verifyOtp = async (req, res) => {
+  const { email, otp } = req.body;
+
   try {
-    const { error, value } = signinSchema.validate({ email, password });
-    if (error) {
-      return res
-        .status(401)
-        .json({ success: false, message: error.details[0] });
+    // Find user with OTP fields
+    const user = await User.findOne({ email }).select(
+      "+verificationCode +verificationCodeValidation"
+    );
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found",
+      });
     }
 
-    const existinguser = await User.findOne({ email }).select("+password");
-    //   console.log(existinguser)
-    if (!existinguser) {
+    if (user.verified) {
+      return res.status(400).json({
+        success: false,
+        message: "User already verified",
+      });
+    }
+
+    // Check OTP validity
+    if (
+      user.verificationCode !== otp ||
+      user.verificationCodeValidation < Date.now()
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid or expired OTP",
+      });
+    }
+
+    // Mark user as verified
+    user.verified = true;
+    user.verificationCode = undefined;
+    user.verificationCodeValidation = undefined;
+    await user.save();
+
+    // Generate JWT token
+    const token = jwt.sign(
+      {
+        userId: user._id,
+        name: user.name,
+        email: user.email,
+        verified: user.verified,
+      },
+      process.env.Secret_Token,
+      { expiresIn: "8h" }
+    );
+
+    res.json({
+      success: true,
+      message: "OTP verified successfully. You are now logged in.",
+      token,
+      user: {
+        name: user.name,
+        email: user.email,
+        photoUrl: user.photoUrl || null,
+      },
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
+  }
+};
+
+
+
+exports.signin = async (req, res) => {
+  const { email, password } = req.body;
+
+  try {
+    // Validate input
+    const { error } = signinSchema.validate({ email, password });
+    if (error) {
+      return res.status(401).json({
+        success: false,
+        message: error.details[0].message,
+      });
+    }
+
+    // Check if user exists
+    const existingUser = await User.findOne({ email }).select("+password +photoUrl");
+    if (!existingUser) {
       return res.status(401).json({
         success: false,
         message: "This user does not exist. Please sign up.",
       });
     }
-    const result = await dohashValidation(password, existinguser.password);
-    if (!result) {
+
+    // Validate password
+    const isValid = await dohashValidation(password, existingUser.password);
+    if (!isValid) {
       return res
         .status(401)
-        .json({ success: false, message: "The credentials is false" });
+        .json({ success: false, message: "Invalid credentials" });
     }
+
+    // Generate JWT
     const token = jwt.sign(
       {
-        userId: existinguser._id,
-        email: existinguser.email,
-        varified: existinguser.verified,
+        userId: existingUser._id,
+        name: existingUser.name, // ✅ include name here too
+        email: existingUser.email,
+        verified: existingUser.verified,
       },
       process.env.Secret_Token,
-      {
-        expiresIn: "8h",
-      }
+      { expiresIn: "8h" }
     );
+
+    // Send cookie + JSON response
     res
-      .cookie("Authorization", "Bearer" + token, {
-        expires: new Date(Date.now() + 8 * 3600000),
-        httpOnly: process.env.NODE_ENV == "production",
-        secure: process.env.NODE_ENV == "production",
+      .cookie("Authorization", "Bearer " + token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === "production",
+        sameSite: "Lax",
+        maxAge: 8 * 3600000, // 8 hours
       })
       .json({
         success: true,
-        token,
-        message: "logged in successfully",
+        token, // still return for frontend localStorage
+        user: {
+          name: existingUser.name, // ✅ fixed this
+          email: existingUser.email,
+          photoUrl: existingUser.photoUrl || "/default-avatar.png",
+        },
+        message: "Logged in successfully",
       });
   } catch (err) {
-    console.log(err);
+    console.error(err);
+    res
+      .status(500)
+      .json({ success: false, message: "Internal Server Error" });
   }
 };
+
 
 exports.signout = async (req, res) => {
   try {
