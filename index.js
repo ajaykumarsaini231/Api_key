@@ -10,10 +10,23 @@ const authRouter = require('./routers/authrouter');
 const postsRouter = require('./routers/postsrouter');
 
 // Middleware
+const allowedOrigins = [
+  "http://localhost:5173", // local dev frontend
+  "https://my-app-sigma-ivory-19.vercel.app", // deployed frontend
+];
+
 app.use(
   cors({
-    origin: "*", // exact URL of your frontend
-    credentials: true,               // allow sending cookies
+    origin: function (origin, callback) {
+      // allow requests with no origin (like Postman)
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.indexOf(origin) === -1) {
+        const msg = `The CORS policy for this site does not allow access from the specified Origin.`;
+        return callback(new Error(msg), false);
+      }
+      return callback(null, true);
+    },
+    credentials: true, // allow cookies
   })
 );
 app.use(cookieParser());
