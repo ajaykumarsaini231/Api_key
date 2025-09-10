@@ -12,7 +12,7 @@ const postsRouter = require('./routers/postsrouter');
 // Middleware
 app.use(
   cors({
-    origin: "http://localhost:5173", // exact URL of your frontend
+    origin: "*", // exact URL of your frontend
     credentials: true,               // allow sending cookies
   })
 );
